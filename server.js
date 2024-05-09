@@ -83,18 +83,45 @@ app.post('/getProfile', (req, res) => {
     });
 });
 
-// app.post('/login', (req, res) => {
-//     const { username, password } = req.body;
-//     const user = users.find(user => user.username === username && user.password === password);
-//     const userExsit = users.find(user => user.username === username);
-//     if (user) {
-//         res.json({ message: 'Login successful', user });
-//     } else if (userExsit) {
-//         res.status(201).json({ message: 'Incorrect Password' });
-//     } else {
-//         res.status(201).json({ message: 'Invalid username or password' });
-//     }
-// });
+app.post('/signup', (req, res) => {
+    const { email, password, name, phonenumber } = req.body;
+    // Query MySQL for user with matching username and password
+    let newId = 0
+    connection.query('SELECT * FROM Persons', [], (err, results) => {
+        console.log('@By all data: ', JSON.stringify(results, null, 2))
+
+        if (results.length > 0) {
+            const lastuser = results[results.length - 1]
+            newId = lastuser.id + 1
+            console.log('@By New Id ', JSON.stringify(newId, null, 2))
+
+            if (newId > 0) {
+                connection.query('INSERT INTO Persons (email, password, id) VALUES (?, ?, ?)', [email, password, newId], (err, results) => {
+                    console.log('@By Sign up query: ', results)
+
+                    connection.query('INSERT INTO userprofiles (userId, name, dob, technology, phonenumber) VALUES (?, ?, ?, ?, ?)', [newId, name, null, null, phonenumber], (err, results) => {
+                        if (err) {
+                            res.status(202).json({ message: 'Error in creating profile' });
+                            res.json({ message: 'Sign Up Successfully done' })
+                        } else {
+                            res.json({ message: 'Sign Up Successfully done' })
+
+                        }
+                    });
+
+                });
+            } else {
+                res.status(202).json({ message: 'Something went wrong.' });
+            }
+        } else {
+            res.status(202).json({ message: 'Error in singup' });
+        }
+
+    });
+
+
+
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
