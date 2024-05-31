@@ -55,13 +55,14 @@ app.post('/login', (req, res) => {
                 }
                 // Check if a user was found
                 if (results.length > 0) {
-                    const userId = results[0].id;
-                    console.log('@here REST ', results[0].id)
+                    const user = { name: 'testuser' }; // Sample payload
 
-                    console.log('@here userId ', userId)
+                    const token = jwt.sign(user, 'Test', { expiresIn: '1h' });
+                    console.log('Temporary Token:', token);
+                    const userId = results[0].id;
                     connection.query('SELECT * FROM userprofiles WHERE userId = ?;', [userId], (err, results) => {
                         console.log('@here Login successfu ', results)
-                        res.json({ message: 'Login successful ', user: results[0] });
+                        res.json({ message: 'Login successful ', user: results[0], token: token });
                     })
 
                 } else {
@@ -84,7 +85,7 @@ const authenticateToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token == null) {
-        res.status(201).json({ message: 'Authorization required..' }); // Unauthorized
+        res.status(201).json({ message: 'Authorization token required..' }); // Unauthorized
     }
     else {
         jwt.verify(token, 'Test', (err, user) => {
