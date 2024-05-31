@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mysql = require('mysql');
 const cors = require('cors'); // Import the cors middleware
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
@@ -31,7 +32,7 @@ connection.connect((err) => {
 });
 
 app.get('/authors', (req, res) => {
-    const filteredAuthors = 'user';
+    const filteredAuthors = 'Hello';
     res.json(filteredAuthors);
 });
 
@@ -54,7 +55,15 @@ app.post('/login', (req, res) => {
                 }
                 // Check if a user was found
                 if (results.length > 0) {
-                    res.json({ message: 'Login successful', user: results[0] });
+                    const userId = results[0].id;
+                    console.log('@here REST ', results[0].id)
+
+                    console.log('@here userId ', userId)
+                    connection.query('SELECT * FROM userprofiles WHERE userId = ?;', [userId], (err, results) => {
+                        console.log('@here Login successfu ', results)
+                        res.json({ message: 'Login successful ', user: results[0] });
+                    })
+
                 } else {
                     res.status(201).json({ message: 'Incorrenct Password' });
                 }
@@ -67,19 +76,44 @@ app.post('/login', (req, res) => {
     });
 });
 
-app.post('/getProfile', (req, res) => {
+const user = { name: 'testuser' }; // Sample payload
+
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token == null) {
+        res.status(201).json({ message: 'Authorization required..' }); // Unauthorized
+    }
+    else {
+        jwt.verify(token, 'Test', (err, user) => {
+            if (err) {
+                res.status(403).json({ message: 'Invalid token..' }); // Forbidden
+            } else {
+                req.user = user;
+
+                next()
+            }
+        });
+    }
+
+};
+
+app.post('/getProfile', authenticateToken, (req, res) => {
     const { userId } = req.body;
-    // Query MySQL for user with matching username and password
+    // Query MySQL for user with matching userId
     connection.query('SELECT * FROM userprofiles WHERE userId = ?;', [userId], (err, results) => {
-        console.log('@By User Id: ', results)
+        if (err) {
+            return res.status(500).json({ message: 'Database error' });
+        }
+        console.log('@By User Id: ', results);
 
         if (results.length > 0) {
-
-            res.json(results[0])
+            res.json(results[0]);
         } else {
-            res.status(202).json({ message: 'User Not exsit' });
+            res.status(202).json({ message: 'User Not exist' });
         }
-
     });
 });
 
